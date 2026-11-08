@@ -6,9 +6,13 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-08
+
 ### Changed
 
-- **Breaking:** `vnet.Setup` and `vnet.Teardown` take a `*vnet.NetworkConfig`.
+- **Breaking (API):** `vnet.Setup` and `vnet.Teardown` take a `*vnet.NetworkConfig`.
+  Released as a minor version because `vnet.Setup` never worked in 1.0.0 (the
+  kernel rejected `vnet.interface`); update calls to `vnet.Setup(&cfg)`.
   `Setup` fills in the names of the interfaces it created (`EpairHost`,
   `EpairJail`, `Bridge`) so the same value can be passed to `Teardown`;
   previously the names were lost and `Teardown` could not remove them.
@@ -56,5 +60,6 @@ follows [Semantic Versioning](https://semver.org/).
   command execution with `jexec`; VNET helpers; `jail.conf` rendering and
   parsing; typed errors; `ErrNotSupported` stubs on non-FreeBSD systems.
 
-[Unreleased]: https://github.com/zombocoder/go-freebsd-jail/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/zombocoder/go-freebsd-jail/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/zombocoder/go-freebsd-jail/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/zombocoder/go-freebsd-jail/releases/tag/v1.0.0
