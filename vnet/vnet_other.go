@@ -19,11 +19,11 @@ type NetworkConfig struct {
 }
 
 // Setup configures VNET networking. Not supported on this platform.
-func Setup(cfg NetworkConfig) error {
+func Setup(cfg *NetworkConfig) error {
 	return jail.ErrNotSupported
 }
 
 // Teardown removes VNET networking. Not supported on this platform.
-func Teardown(cfg NetworkConfig) error {
+func Teardown(cfg *NetworkConfig) error {
 	return jail.ErrNotSupported
 }

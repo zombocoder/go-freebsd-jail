@@ -5,6 +5,9 @@
 - Idempotent `CreateOrUpdate` for declarative jail management
 - Query jail details and list all running jails
 - Full support for jail parameters (persist, VNET, allow.*, limits)
+- jail(8)-style `vnet.interface` and `mount.devfs` handling: interfaces are moved
+  with `SIOCSIFVNET` and devfs is mounted with `nmount(2)` (default ruleset 4),
+  with rollback if any step of jail creation fails
 
 ## Native C/cgo Bindings
 - Direct integration with FreeBSD libjail (`jailparam_*` APIs)

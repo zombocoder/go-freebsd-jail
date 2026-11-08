@@ -171,12 +171,12 @@ db {
 
 func TestParse_RoundTrip(t *testing.T) {
 	original := jail.Config{
-		Path:     "/jails/roundtrip",
-		Hostname: "rt.local",
-		Persist:  true,
-		VNET:     true,
+		Path:          "/jails/roundtrip",
+		Hostname:      "rt.local",
+		Persist:       true,
+		VNET:          true,
 		VNETInterface: []string{"epair0b"},
-		MountDevFS: true,
+		MountDevFS:    true,
 		Allow: jail.AllowConfig{
 			RawSockets:  true,
 			Mount:       true,

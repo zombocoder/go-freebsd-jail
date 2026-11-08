@@ -1,16 +1,23 @@
 # go-freebsd-jail
 
+[![CI](https://github.com/zombocoder/go-freebsd-jail/actions/workflows/ci.yml/badge.svg)](https://github.com/zombocoder/go-freebsd-jail/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/zombocoder/go-freebsd-jail.svg)](https://pkg.go.dev/github.com/zombocoder/go-freebsd-jail)
-[![FreeBSD](https://img.shields.io/badge/platform-FreeBSD-red.svg)](https://www.freebsd.org/)
-[![Go Version](https://img.shields.io/badge/go-%3E%3D1.22-blue.svg)](https://golang.org/)
-[![License](https://img.shields.io/badge/license-BSD--2--Clause-green.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zombocoder/go-freebsd-jail)](https://goreportcard.com/report/github.com/zombocoder/go-freebsd-jail)
+[![Release](https://img.shields.io/github/v/release/zombocoder/go-freebsd-jail?sort=semver)](https://github.com/zombocoder/go-freebsd-jail/releases)
+[![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD--2--Clause-orange.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-%3E%3D1.24-00ADD8.svg)](https://golang.org/)
+[![FreeBSD](https://img.shields.io/badge/FreeBSD-14%20%7C%2015-red.svg)](https://www.freebsd.org/)
 
 FreeBSD jail management library for Go with native cgo/libjail bindings.
 
+**Tested in CI on:** FreeBSD 14.5 and 15.1 (amd64), with the full e2e suite
+running as root in QEMU VMs. See the [changelog](CHANGELOG.md) and
+[releases](https://github.com/zombocoder/go-freebsd-jail/releases).
+
 ## Requirements
 
-- FreeBSD 13.x+ (14.x primary target)
-- Go 1.22+
+- FreeBSD 14 or 15 (tested in CI on 14.5 and 15.1); VNET needs a `VIMAGE` kernel (the default `GENERIC`)
+- Go 1.24+
 - cgo enabled (FreeBSD base C compiler)
 - libjail (included in FreeBSD base)
 - Root privileges for create/update/remove/attach operations
@@ -90,22 +97,43 @@ jid, err := jail.Create(jail.Config{
     Hostname:      "web.local",
     Persist:       true,
     VNET:          true,
-    VNETInterface: []string{"epair0b"},
+    VNETInterface: []string{"epair0b"}, // moved into the jail's vnet after creation
 })
 ```
+
+### Mount devfs
+
+```go
+jid, err := jail.Create(jail.Config{
+    Name:       "web",
+    Path:       "/jails/web",
+    Persist:    true,
+    MountDevFS: true, // devfs on /jails/web/dev with ruleset 4 (devfsrules_jail)
+})
+// jail.Remove("web") unmounts it again.
+```
+
+Like `jail(8)`, the library implements `vnet.interface` and `mount.devfs`
+itself (they are not kernel parameters) and rolls back the jail if either step
+fails.
 
 ### VNET Network Setup
 
 ```go
 import "github.com/zombocoder/go-freebsd-jail/vnet"
 
-err := vnet.Setup(vnet.NetworkConfig{
+netCfg := vnet.NetworkConfig{
     JailName:    "web",
     Bridge:      "bridge0",
     CreateEpair: true,
     JailAddress: "10.0.0.2/24",
     Gateway:     "10.0.0.1",
-})
+}
+// Setup fills in netCfg.EpairHost/EpairJail; pass the same value to Teardown.
+if err := vnet.Setup(&netCfg); err != nil {
+    log.Fatal(err)
+}
+defer vnet.Teardown(&netCfg)
 ```
 
 ### Generate jail.conf
@@ -148,6 +176,13 @@ Most jail operations require root privileges. Operations that fail due to insuff
 ## FreeBSD Only
 
 This library only works on FreeBSD. On other operating systems, all public functions return `ErrNotSupported`. The library compiles cleanly on all platforms — no cgo is required on non-FreeBSD systems.
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for how to
+run the tests, what CI checks, and where help is wanted. Please follow the
+[Code of Conduct](CODE_OF_CONDUCT.md) and report security issues privately as
+described in [SECURITY.md](SECURITY.md).
 
 ## Related Projects
 

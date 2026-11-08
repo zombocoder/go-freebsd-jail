@@ -5,8 +5,9 @@
 // virtual network stack.
 //
 // VNET jails have their own isolated network stack. Interfaces are moved into
-// the jail via the vnet.interface kernel parameter. Once moved, the interface
-// is no longer visible on the host.
+// the jail with the SIOCSIFVNET ioctl (what "ifconfig <if> vnet <jail>" does);
+// vnet.interface is only a jail(8)/jail.conf setting, not a kernel parameter.
+// Once moved, the interface is no longer visible on the host.
 //
 // On non-FreeBSD systems, all functions return jail.ErrNotSupported.
 package vnet

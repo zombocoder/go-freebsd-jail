@@ -11,12 +11,12 @@ import (
 func main() {
 	configs := map[string]jail.Config{
 		"web": {
-			Path:     "/jails/web",
-			Hostname: "web.local",
-			Persist:  true,
-			VNET:     true,
+			Path:          "/jails/web",
+			Hostname:      "web.local",
+			Persist:       true,
+			VNET:          true,
 			VNETInterface: []string{"epair0b"},
-			MountDevFS: true,
+			MountDevFS:    true,
 			Allow: jail.AllowConfig{
 				RawSockets: true,
 			},

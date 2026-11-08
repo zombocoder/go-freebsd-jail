@@ -4,6 +4,7 @@ package jailops
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/zombocoder/go-freebsd-jail/internal/c"
 	"github.com/zombocoder/go-freebsd-jail/internal/jailerr"
@@ -22,10 +23,39 @@ func Create(cfg types.Config) (int, error) {
 		return -1, &jailerr.OperationError{Op: "create", Jail: cfg.Name, Err: err}
 	}
 
-	cparams := paramsToCParams(params)
-	jid, err := c.JailSet(cparams, c.FlagCreate)
+	jid, err := createJail(cfg, params)
 	if err != nil {
 		return -1, &jailerr.OperationError{Op: "create", Jail: cfg.Name, Err: err}
+	}
+	return jid, nil
+}
+
+// createJail mounts devfs (if requested), creates the jail and moves its
+// VNET interfaces. On failure everything done so far is rolled back, so the
+// caller never sees a half-configured jail.
+func createJail(cfg types.Config, params []param.Param) (jid int, err error) {
+	var devfsMountpoint string
+	if cfg.MountDevFS {
+		// Like jail(8), mount before creating so the jail starts with /dev.
+		if devfsMountpoint, err = mountDevFS(cfg.Path, devfsRuleset(cfg)); err != nil {
+			return -1, err
+		}
+	}
+	defer func() {
+		// Unmount exactly the (already validated) path that was mounted.
+		if err != nil && devfsMountpoint != "" {
+			_ = c.Unmount(devfsMountpoint, true)
+		}
+	}()
+
+	jid, err = c.JailSet(paramsToCParams(params), c.FlagCreate)
+	if err != nil {
+		return -1, err
+	}
+
+	if err = moveInterfaces(jid, cfg.VNETInterface, false); err != nil {
+		_ = c.JailRemove(jid)
+		return -1, err
 	}
 	return jid, nil
 }
@@ -43,18 +73,27 @@ func CreateOrUpdate(cfg types.Config) (int, error) {
 	}
 
 	// Try create first
-	cparams := paramsToCParams(params)
-	jid, err := c.JailSet(cparams, c.FlagCreate)
+	jid, err := createJail(cfg, params)
 	if err == nil {
 		return jid, nil
 	}
 
 	// If jail already exists, retry as update without immutable params
 	if errors.Is(err, jailerr.ErrExists) {
+		if cfg.MountDevFS {
+			if _, err := mountDevFS(cfg.Path, devfsRuleset(cfg)); err != nil {
+				return -1, &jailerr.OperationError{Op: "create_or_update", Jail: cfg.Name, Err: err}
+			}
+		}
 		updateParams := filterImmutableParams(params)
-		cparams = paramsToCParams(updateParams)
+		cparams := paramsToCParams(updateParams)
 		jid, err = c.JailSet(cparams, c.FlagUpdate)
 		if err != nil {
+			return -1, &jailerr.OperationError{Op: "create_or_update", Jail: cfg.Name, Err: err}
+		}
+		// Interfaces moved by a previous call are no longer on the host;
+		// skip them so repeated calls stay idempotent.
+		if err := moveInterfaces(jid, cfg.VNETInterface, true); err != nil {
 			return -1, &jailerr.OperationError{Op: "create_or_update", Jail: cfg.Name, Err: err}
 		}
 		return jid, nil
@@ -65,7 +104,9 @@ func CreateOrUpdate(cfg types.Config) (int, error) {
 
 // filterImmutableParams removes params that cannot be changed after jail creation.
 func filterImmutableParams(params []param.Param) []param.Param {
-	immutable := map[string]bool{"path": true}
+	// path and vnet can only be set when the jail is created; jail_set(2)
+	// rejects them on update even when the value is unchanged.
+	immutable := map[string]bool{"path": true, "vnet": true}
 	filtered := make([]param.Param, 0, len(params))
 	for _, p := range params {
 		if !immutable[p.Name] {
@@ -81,6 +122,16 @@ func validateCreateConfig(cfg types.Config) error {
 	}
 	if cfg.Path == "" {
 		return &jailerr.ValidationError{Field: "path", Value: "", Err: jailerr.ErrInvalidArgument}
+	}
+	if err := validateDevFS(cfg); err != nil {
+		return err
+	}
+	if len(cfg.VNETInterface) > 0 && !cfg.VNET {
+		return &jailerr.ValidationError{
+			Field: "VNETInterface",
+			Value: cfg.VNETInterface[0],
+			Err:   fmt.Errorf("%w: VNETInterface requires VNET", jailerr.ErrInvalidArgument),
+		}
 	}
 	return nil
 }

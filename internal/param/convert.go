@@ -16,7 +16,7 @@ var reservedParams = map[string]bool{
 	"persist": true, "nopersist": true,
 	"vnet": true, "novnet": true,
 	"vnet.interface": true,
-	"ip4.addr": true, "ip6.addr": true,
+	"ip4.addr":       true, "ip6.addr": true,
 	"children.max": true, "devfs_ruleset": true,
 	"jid": true, "lastjid": true,
 }
@@ -54,11 +54,13 @@ func ConfigToParams(cfg types.Config) ([]Param, error) {
 		params = append(params, Param{Name: "vnet", IsBool: true})
 	}
 
+	// vnet.interface is a jail(8) pseudo-parameter, not a kernel one:
+	// jail_set(2) rejects it. The names are only validated here; the
+	// interfaces are moved with SIOCSIFVNET after the jail exists.
 	for _, iface := range cfg.VNETInterface {
 		if err := validate.InterfaceName(iface); err != nil {
 			return nil, err
 		}
-		params = append(params, Param{Name: "vnet.interface", Value: iface})
 	}
 
 	if len(cfg.IP4) > 0 {
@@ -79,9 +81,8 @@ func ConfigToParams(cfg types.Config) ([]Param, error) {
 		params = append(params, Param{Name: "ip6.addr", Value: strings.Join(cfg.IP6, ",")})
 	}
 
-	if cfg.MountDevFS {
-		params = append(params, Param{Name: "mount.devfs", IsBool: true})
-	}
+	// mount.devfs is a jail(8) pseudo-parameter; the kernel rejects it.
+	// jailops mounts devfs itself before creating the jail.
 
 	if cfg.DevFSRuleset != nil {
 		params = append(params, Param{Name: "devfs_ruleset", Value: strconv.Itoa(*cfg.DevFSRuleset)})

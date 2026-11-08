@@ -3,3 +3,7 @@ bin/
 *.a
 *.so
 *.test
+
+# Local multi-module development (e.g. against a local go-freebsd-ifc)
+go.work
+go.work.sum

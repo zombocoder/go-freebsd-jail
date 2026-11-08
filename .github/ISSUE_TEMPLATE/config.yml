@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/zombocoder/go-freebsd-jail/security/advisories/new
+    about: Please report security problems privately, not as a public issue.
+  - name: Network interface problems (epair, bridge, vnet moves)
+    url: https://github.com/zombocoder/go-freebsd-ifc/issues
+    about: Interface handling is done by go-freebsd-ifc; bugs there belong in that repository.
+  - name: FreeBSD kernel or jail(8) bugs
+    url: https://bugs.freebsd.org/
+    about: Bugs in the jail subsystem or base utilities themselves belong upstream.
