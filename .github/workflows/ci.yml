@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    # Besides formatting, this checks the promise that the module builds on
+    # any GOOS (all public functions return ErrNotSupported off FreeBSD) and
+    # that the pure-Go unit tests pass there.
+    name: Lint and non-FreeBSD build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files are not gofmt-formatted (run 'gofmt -w .'):"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
+
+      - name: Build and vet on Linux
+        run: |
+          go vet ./...
+          go build ./...
+          go build ./examples/...
+
+      - name: Unit tests on Linux
+        run: go test -count=1 ./...
+
+  freebsd:
+    # Jails need a FreeBSD kernel, so the library is built and tested inside
+    # FreeBSD VMs running under QEMU on the Linux runner. The e2e tests run as
+    # root and create and remove their own jails (gotest-*), vnet jails with
+    # epair/bridge interfaces, and devfs mounts under temporary directories;
+    # the VM is discarded afterwards.
+    name: FreeBSD ${{ matrix.release }}
+    runs-on: ubuntu-latest
+    # A normal run takes a few minutes; occasionally the VM hangs while
+    # booting under nested virtualization. Fail fast so the job can be re-run.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ["14.5", "15.1"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build and test in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1.5.9
+        with:
+          release: ${{ matrix.release }}
+          copyback: false
+          cache-after-prepare: true
+          prepare: |
+            ASSUME_ALWAYS_YES=yes pkg install -y go
+          run: |
+            set -e
+            export GOFLAGS=-buildvcs=false
+            freebsd-version -ku
+            go version
+            go vet ./...
+            go vet -tags=e2e ./tests/e2e/...
+            go build ./...
+            go build ./examples/...
+            go test -count=1 -v ./...
+            go test -count=1 -p 1 -v -tags=e2e ./tests/e2e/...

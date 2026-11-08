@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest a new jail parameter, operation or API improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The task you are trying to accomplish and why the current API does not cover it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cli-equivalent
+    attributes:
+      label: Equivalent jail(8) command or jail.conf setting
+      description: If the feature mirrors jail(8), jls(8), jexec(8) or a jail.conf parameter, which one (e.g. `mount.fstab`, `exec.start`)?
+      render: shell
+
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed API
+      description: How would you like to call it from Go? Rough sketches are fine.
+      render: go
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this myself

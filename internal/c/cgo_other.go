@@ -32,3 +32,11 @@ func JailRemove(jid int) error {
 func JailAttach(jid int) error {
 	return jailerr.ErrNotSupported
 }
+
+func MountDevFS(path string, ruleset int) error {
+	return jailerr.ErrNotSupported
+}
+
+func Unmount(path string, force bool) error {
+	return jailerr.ErrNotSupported
+}

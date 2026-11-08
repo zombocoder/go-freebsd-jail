@@ -136,6 +136,34 @@ func JailAttach(jid int) error {
 	return nil
 }
 
+// MountDevFS mounts devfs on path with the given devfs ruleset.
+func MountDevFS(path string, ruleset int) error {
+	cpath := C.CString(path)
+	defer C.free(unsafe.Pointer(cpath))
+
+	res := C.gj_mount_devfs(cpath, C.int(ruleset))
+	if res.jid < 0 {
+		return gjsyscall.MapErrno(syscall.Errno(res.errnum), C.GoString(&res.errmsg[0]))
+	}
+	return nil
+}
+
+// Unmount unmounts the file system mounted on path.
+func Unmount(path string, force bool) error {
+	cpath := C.CString(path)
+	defer C.free(unsafe.Pointer(cpath))
+
+	cforce := C.int(0)
+	if force {
+		cforce = 1
+	}
+	res := C.gj_unmount(cpath, cforce)
+	if res.jid < 0 {
+		return gjsyscall.MapErrno(syscall.Errno(res.errnum), C.GoString(&res.errmsg[0]))
+	}
+	return nil
+}
+
 func buildCParams(params []Param) (*C.struct_gj_param, func()) {
 	cparams := (*C.struct_gj_param)(C.calloc(C.size_t(len(params)), C.size_t(unsafe.Sizeof(C.struct_gj_param{}))))
 	cstrings := make([]*C.char, 0, len(params)*2)

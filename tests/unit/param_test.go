@@ -57,6 +57,7 @@ func TestConfigToParams_VNET(t *testing.T) {
 		Persist:       true,
 		VNET:          true,
 		VNETInterface: []string{"epair0b"},
+		MountDevFS:    true,
 	}
 
 	params, err := param.ConfigToParams(cfg)
@@ -69,10 +70,30 @@ func TestConfigToParams_VNET(t *testing.T) {
 		found[p.Name] = true
 	}
 
-	for _, required := range []string{"name", "path", "host.hostname", "persist", "vnet", "vnet.interface"} {
+	for _, required := range []string{"name", "path", "host.hostname", "persist", "vnet"} {
 		if !found[required] {
 			t.Errorf("missing required param %q", required)
 		}
+	}
+
+	// vnet.interface and mount.devfs are jail(8) pseudo-parameters; the
+	// kernel rejects them, so they must never reach jail_set(2).
+	for _, pseudo := range []string{"vnet.interface", "mount.devfs"} {
+		if found[pseudo] {
+			t.Errorf("pseudo-parameter %q must not be passed to jail_set", pseudo)
+		}
+	}
+}
+
+func TestConfigToParams_VNETInterfaceValidated(t *testing.T) {
+	cfg := types.Config{
+		Name:          "vnet-jail",
+		Path:          "/jails/vnet",
+		VNET:          true,
+		VNETInterface: []string{"bad name;rm"},
+	}
+	if _, err := param.ConfigToParams(cfg); err == nil {
+		t.Fatal("expected validation error for invalid interface name")
 	}
 }
 

@@ -48,6 +48,19 @@ struct gj_result gj_jail_remove(int jid);
  */
 struct gj_result gj_jail_attach(int jid);
 
+/*
+ * gj_mount_devfs mounts a devfs instance on fspath and applies ruleset
+ * (equivalent of "mount -t devfs -o ruleset=N devfs fspath").
+ * Returns result with jid=0 on success.
+ */
+struct gj_result gj_mount_devfs(const char *fspath, int ruleset);
+
+/*
+ * gj_unmount unmounts the file system mounted on path.
+ * Returns result with jid=0 on success.
+ */
+struct gj_result gj_unmount(const char *path, int force);
+
 void gj_free(void *ptr);
 
 #endif /* GJ_JAIL_WRAP_H */

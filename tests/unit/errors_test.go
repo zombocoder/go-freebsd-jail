@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/zombocoder/go-freebsd-jail/jail"
 	"github.com/zombocoder/go-freebsd-jail/internal/jailerr"
+	"github.com/zombocoder/go-freebsd-jail/jail"
 )
 
 func TestErrorsIs(t *testing.T) {

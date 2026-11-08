@@ -32,5 +32,10 @@ func Remove(nameOrJID string) error {
 		}
 		return &jailerr.OperationError{Op: "remove", Jail: nameOrJID, Err: err}
 	}
+
+	// Like "jail -r" with mount.devfs: drop the jail's devfs mount.
+	if err := unmountDevFS(info.Path); err != nil {
+		return &jailerr.OperationError{Op: "remove", Jail: nameOrJID, Err: err}
+	}
 	return nil
 }
